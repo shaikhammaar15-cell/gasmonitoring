@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ESP32 Multi-Gas Monitoring System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0E1512; --panel:#151F1A; --line:#27362F;
+  --ink:#E7EDE8; --ink-dim:#8FA096;
+  --amber:#F2B84B; --teal:#5BD6B8;
+  font-family:'Space Grotesk',sans-serif, system-ui;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#F3F1EA; --panel:#FFFFFF; --line:#DAD6C9;
+    --ink:#161B17; --ink-dim:#5B6459;
+  }
+}
+*{box-sizing:border-box;}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  line-height:1.55;
+}
+.wrap{max-width:1040px; margin:0 auto; padding:0 24px;}
+header.hero{border-bottom:1px solid var(--line); padding:56px 0 40px;}
+.tag{font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--amber); margin:0 0 10px;}
+h1{font-size:clamp(28px,5vw,44px); margin:0 0 14px; font-weight:700; max-width:16ch;}
+.sub{color:var(--ink-dim); max-width:62ch; font-size:17px;}
+nav.index{
+  display:flex; gap:18px; flex-wrap:wrap; padding:14px 0; margin-top:28px;
+  border-top:1px solid var(--line); font-family:'JetBrains Mono',monospace; font-size:13px;
+}
+nav.index a{color:var(--ink-dim); text-decoration:none;}
+nav.index a:hover, nav.index a:focus-visible{color:var(--amber);}
+main{padding:48px 0 80px;}
+section{padding:40px 0; border-bottom:1px solid var(--line);}
+section:last-child{border-bottom:none;}
+h2{font-size:22px; margin:0 0 18px; display:flex; align-items:baseline; gap:10px;}
+h2 .num{font-family:'JetBrains Mono',monospace; color:var(--amber); font-size:15px;}
+p{max-width:74ch; margin:0 0 14px;}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:22px;}
+table{border-collapse:collapse; width:100%; font-size:14px;}
+th,td{text-align:left; padding:9px 10px; border-bottom:1px solid var(--line);}
+th{font-family:'JetBrains Mono',monospace; font-weight:500; color:var(--ink-dim); font-size:12px; text-transform:uppercase; letter-spacing:.04em;}
+.diagram{width:100%; height:auto; display:block;}
+.diagram text{font-family:'JetBrains Mono',monospace; fill:var(--ink);}
+.diagram .node{fill:var(--panel); stroke:var(--line);}
+.diagram .center{stroke:var(--amber);}
+.diagram line{stroke:var(--ink-dim); stroke-width:1.4;}
+.placeholder{
+  border:1px dashed var(--line); border-radius:6px; padding:32px; text-align:center;
+  color:var(--ink-dim); font-family:'JetBrains Mono',monospace; font-size:13px;
+}
+.embed-wrap{border:1px solid var(--line); border-radius:6px; overflow:hidden; background:var(--panel);}
+.embed-wrap iframe{width:100%; height:520px; border:0; display:block;}
+.status-row{display:flex; gap:20px; flex-wrap:wrap; margin:18px 0 0;}
+.status{font-family:'JetBrains Mono',monospace; font-size:13px; display:flex; align-items:center; gap:8px;}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--teal); display:inline-block;}
+.dot.warn{background:var(--amber);}
+code{font-family:'JetBrains Mono',monospace; background:var(--panel); border:1px solid var(--line); padding:2px 6px; border-radius:3px; font-size:13px;}
+footer{padding:28px 0; color:var(--ink-dim); font-size:13px; font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="tag">UNDERGRADUATE PROJECT — ELECTRICAL ENGINEERING</p>
+    <h1>ESP32 Multi-Gas Monitoring &amp; Alert System</h1>
+    <p class="sub">A low-cost IoT system for continuous indoor air-quality and gas-leakage monitoring using MQ-series sensors, with local alerts and live remote dashboards.</p>
+    <nav class="index">
+      <a href="#abstract">Abstract</a>
+      <a href="#intro">Introduction</a>
+      <a href="#block">System Design</a>
+      <a href="#circuit">Circuit Diagram</a>
+      <a href="#components">Components</a>
+      <a href="#live">Live Monitoring</a>
+      <a href="#conclusion">Conclusion</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="abstract">
+    <h2><span class="num">01</span>Abstract</h2>
+    <p>This project presents a multi-gas monitoring and alert system built around the ESP32 microcontroller. Four semiconductor gas sensors — MQ-135, MQ-4, MQ-6, and MQ-7 — are used to detect air-quality pollutants, methane, LPG, and carbon monoxide respectively. Sensor readings are displayed locally on an LCD and raised through a buzzer and recorded voice alert (via DFPlayer Mini) when concentrations cross safe thresholds. The system also sends SMS/call alerts through a SIM800L GSM module and streams live readings to Ubidots and Blynk IoT dashboards, enabling continuous remote monitoring from any device with internet access.</p>
+  </section>
+
+  <section id="intro">
+    <h2><span class="num">02</span>Introduction</h2>
+    <p>Gas leaks and poor indoor air quality are common safety hazards in homes, laboratories, and industrial spaces, and often go undetected until concentrations reach dangerous levels. Commercial gas-detection systems capable of continuous remote monitoring are typically expensive and closed-source, making them impractical for small labs, hostels, or home use.</p>
+    <p>This project addresses that gap with an affordable, open, ESP32-based system that monitors four gas parameters simultaneously, gives immediate local warning, and — critically — stays monitorable remotely through free IoT dashboards, so a leak can be noticed even when no one is physically present near the unit.</p>
+  </section>
+
+  <section id="block">
+    <h2><span class="num">03</span>System Block Diagram</h2>
+    <div class="card">
+      <svg class="diagram" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <rect class="node" x="30" y="40" width="140" height="36" rx="4"/>
+        <text x="100" y="63" font-size="13" text-anchor="middle">MQ-135 (Air)</text>
+        <rect class="node" x="30" y="90" width="140" height="36" rx="4"/>
+        <text x="100" y="113" font-size="13" text-anchor="middle">MQ-4 (CH4)</text>
+        <rect class="node" x="30" y="140" width="140" height="36" rx="4"/>
+        <text x="100" y="163" font-size="13" text-anchor="middle">MQ-6 (LPG)</text>
+        <rect class="node" x="30" y="190" width="140" height="36" rx="4"/>
+        <text x="100" y="213" font-size="13" text-anchor="middle">MQ-7 (CO)</text>
+
+        <line x1="170" y1="58" x2="300" y2="140"/>
+        <line x1="170" y1="108" x2="300" y2="140"/>
+        <line x1="170" y1="158" x2="300" y2="150"/>
+        <line x1="170" y1="208" x2="300" y2="160"/>
+
+        <rect class="node center" x="300" y="112" width="150" height="56" rx="4"/>
+        <text x="375" y="135" font-size="13" text-anchor="middle" font-weight="700">ESP32</text>
+        <text x="375" y="153" font-size="11" text-anchor="middle" fill="var(--ink-dim)">Wi-Fi + Processing</text>
+
+        <line x1="450" y1="125" x2="580" y2="50"/>
+        <line x1="450" y1="135" x2="580" y2="100"/>
+        <line x1="450" y1="145" x2="580" y2="150"/>
+        <line x1="450" y1="155" x2="580" y2="200"/>
+        <line x1="450" y1="162" x2="580" y2="250"/>
+
+        <rect class="node" x="580" y="32" width="150" height="36" rx="4"/>
+        <text x="655" y="55" font-size="13" text-anchor="middle">LCD Display</text>
+        <rect class="node" x="580" y="82" width="150" height="36" rx="4"/>
+        <text x="655" y="105" font-size="13" text-anchor="middle">Buzzer + DFPlayer</text>
+        <rect class="node" x="580" y="132" width="150" height="36" rx="4"/>
+        <text x="655" y="155" font-size="13" text-anchor="middle">SIM800L (SMS/Call)</text>
+        <rect class="node" x="580" y="182" width="150" height="36" rx="4"/>
+        <text x="655" y="205" font-size="13" text-anchor="middle">Ubidots Cloud</text>
+        <rect class="node" x="580" y="232" width="150" height="36" rx="4"/>
+        <text x="655" y="255" font-size="13" text-anchor="middle">Blynk IoT App</text>
+      </svg>
+    </div>
+  </section>
+
+  <section id="circuit">
+    <h2><span class="num">04</span>Circuit Diagram</h2>
+    <p>Replace this placeholder with your schematic — export from Fritzing/EasyEDA as a PNG and swap the <code>&lt;div class="placeholder"&gt;</code> block below for an <code>&lt;img&gt;</code> tag.</p>
+    <div class="placeholder">
+      &lt;!-- Replace with: &lt;img src="circuit-diagram.png" alt="Circuit diagram" style="width:100%;border-radius:6px"&gt; --&gt;<br>
+      Circuit diagram goes here
+    </div>
+  </section>
+
+  <section id="components">
+    <h2><span class="num">05</span>Components Used</h2>
+    <div class="card">
+      <table>
+        <tr><th>Component</th><th>Function</th></tr>
+        <tr><td>ESP32 Dev Board</td><td>Main controller, Wi-Fi connectivity</td></tr>
+        <tr><td>MQ-135</td><td>Air quality / NH3 / CO2 sensing</td></tr>
+        <tr><td>MQ-4</td><td>Methane / natural gas sensing</td></tr>
+        <tr><td>MQ-6</td><td>LPG / propane sensing</td></tr>
+        <tr><td>MQ-7</td><td>Carbon monoxide sensing</td></tr>
+        <tr><td>16x2 LCD</td><td>Local readout of gas levels</td></tr>
+        <tr><td>DFPlayer Mini + Speaker</td><td>Voice alert on threshold breach</td></tr>
+        <tr><td>Buzzer</td><td>Audible alarm</td></tr>
+        <tr><td>SIM800L</td><td>SMS/call alert over GSM</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="live">
+    <h2><span class="num">06</span>Live Monitoring</h2>
+    <p>This panel embeds the public Ubidots dashboard, so readings update continuously without reloading the page. To connect it: open your Ubidots dashboard → Share → make it public → copy the embed URL → paste it into the <code>src</code> attribute below.</p>
+    <div class="embed-wrap">
+      <!-- Replace src below with your Ubidots public dashboard embed URL -->
+      <iframe src="" title="Live gas sensor dashboard" loading="lazy"></iframe>
+    </div>
+    <div class="status-row">
+      <span class="status"><span class="dot"></span>CO / LPG / CH4 / Air Quality — nominal</span>
+      <span class="status"><span class="dot warn"></span>Alert threshold exceeded</span>
+    </div>
+  </section>
+
+  <section id="conclusion">
+    <h2><span class="num">07</span>Conclusion</h2>
+    <p>The system demonstrates that reliable, continuous, multi-gas monitoring with local and remote alerting can be built at low cost using commodity sensors and an ESP32. Future work includes sensor calibration against certified reference gases, battery backup for power-outage operation, and data logging for long-term air-quality trend analysis.</p>
+  </section>
+
+</main>
+
+<footer class="wrap">Electrical Engineering Department · Student Project · Built for GitHub Pages</footer>
+</body>
+</html>
